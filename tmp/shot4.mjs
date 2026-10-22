@@ -1,0 +1,24 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] });
+const errors = [];
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+page.on('pageerror', e => errors.push('PAGE ' + e.message));
+page.on('console', m => { if (m.type()==='error') errors.push('CONSOLE ' + m.text()); });
+await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1200);
+await page.getByRole('button', { name: /Initiate Drop/i }).click({ noWaitAfter: true, force: true });
+await page.waitForTimeout(1400);
+await page.screenshot({ path: 'tmp/game-countdown.png' });
+// skip countdown by fast clicking to get pointer lock maybe
+await page.locator('canvas').click({ position: { x: 700, y: 450 }, force: true }).catch(()=>{});
+await page.waitForTimeout(9000);
+await page.screenshot({ path: 'tmp/game4.png' });
+console.log('err', errors);
+const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+await mobile.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+await mobile.waitForTimeout(1200);
+await mobile.screenshot({ path: 'tmp/mobile-menu2.png' });
+await mobile.getByRole('button', { name: /Initiate Drop/i }).click({ noWaitAfter: true, force: true });
+await mobile.waitForTimeout(8000);
+await mobile.screenshot({ path: 'tmp/mobile-game2.png', timeout: 60000 }).catch(e=>console.log('mobile shot fail'));
+await browser.close();

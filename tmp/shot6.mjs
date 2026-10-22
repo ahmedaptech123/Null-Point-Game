@@ -1,0 +1,30 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'] });
+const errors = [];
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+page.on('pageerror', e => errors.push('PAGE ' + e.message));
+page.on('console', m => { if (m.type()==='error') errors.push('CONSOLE ' + m.text()); });
+await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1000);
+await page.screenshot({ path: 'tmp/final-menu.png' });
+await page.getByRole('button', { name: /Initiate Drop/i }).click({ noWaitAfter: true, force: true });
+await page.waitForTimeout(5500);
+await page.screenshot({ path: 'tmp/final-game.png' });
+// shooting test
+const before = await page.locator('body').innerText();
+const ammoBefore = (before.match(/\n(\d{2})\n\/ 240/)||[])[1];
+await page.locator('canvas').click({ position: { x: 720, y: 450 }, force: true }).catch(()=>{});
+await page.keyboard.press('Space').catch(()=>{});
+await page.mouse.move(720, 450);
+await page.mouse.down();
+await page.waitForTimeout(1200);
+await page.mouse.up();
+const after = await page.locator('body').innerText();
+const ammoAfter = (after.match(/\n(\d{2})\n\/( \d+)/)||[])[1];
+console.log('ammo', ammoBefore, '->', ammoAfter, 'errors', errors);
+// pause via HUD button
+await page.getByRole('button', { name: /Pause simulation/i }).click({ force: true }).catch(e=>console.log('pause fail', e.message.split('\n')[0]));
+await page.waitForTimeout(800);
+await page.screenshot({ path: 'tmp/final-pause.png' });
+console.log('pause text?', (await page.locator('body').innerText()).includes('Simulation\nPaused') || (await page.locator('body').innerText()).includes('SIMULATION INTERRUPTED'));
+await browser.close();
